@@ -1,8 +1,8 @@
 const CACHE_NAME = 'friendCite-pwa-cache-v1';
 const urlsToCache = [
   '/',
-  '/indexCite.html',
-  '/manifestCite.json',
+  '/index.html',
+  '/manifest.json',
   // Füge hier weitere Ressourcen hinzu, z. B. CSS-Dateien oder Icons:
   // '/icon-192.png',
   // '/icon-512.png'
