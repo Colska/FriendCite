@@ -272,6 +272,13 @@
     <div id="quoteList"></div>
 
     <script>
+
+      if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('service-worker-cite.js')
+            .then(() => console.log('Service Worker registriert'))
+            .catch(err => console.error('Service Worker Fehler:', err));
+      }
+      
       /* === Zustand & Storage ========================================= */
       const STORAGE_KEY = 'friendciteData';
       const SETTINGS_KEY = 'friendciteSettings';
