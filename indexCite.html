@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FriendCite</title>
+    <link rel="manifest" href="manifestCite.json" />
+      <style>
+      /* ---------- Grundlayout ---------------------------------------- */
+      body{
+        font-family:Arial,sans-serif;
+        margin:0;
+        padding:2em;
+        background:#272323;
+        color:#fff;
+        text-align:center;
+      }
+
+      .topBar{
+        position:fixed;
+        top:0;left:0;right:0;
+        height:4.5rem;
+        display:flex;
+        align-items:center;
+        padding:0 1.2rem;
+        background:#272323;
+        z-index:3100;
+        box-sizing:border-box;
+      }
+
+      #appTitle{
+        flex:1;
+        margin:0;
+        font-size:2rem;
+        text-align:center;
+      }
+
+      /* ---------- Gruppenleiste -------------------------------------- */
+      #groupBar{white-space:nowrap;
+        overflow-x:auto;
+        padding:.4rem .2rem;
+        border-bottom:1px solid #444;
+        margin-bottom:1rem;
+        margin-top:4.5rem;
+      }
+
+      .group-pill{display:inline-block;
+        margin:0 .3rem;
+        padding:.35rem .8rem;
+        background:#444;
+        border-radius:1rem;
+        cursor:pointer;
+        font-size:.85rem;
+      }
+
+      .group-pill.active{
+        background:#0077ff;
+      }
+
+      .group-pill:hover{
+        background:#005fd1;
+      }
+
+      /* ---------- Sort-Dropdown -------------------------------------- */
+      #sortWrapper{
+        margin-bottom:1rem;
+      }
+
+      #sortSelect{
+        padding:.3rem .6rem;
+        border-radius:.3rem;
+        border:none;
+        font-size:.85rem;
+      }
+
+      /* ---------- Zitatliste ----------------------------------------- */
+      #quoteList{
+        max-width:700px;
+        margin:0 auto;
+        text-align:left;
+      }
+
+      .quote-item{
+        margin:.3rem 0;
+        padding:.45rem .6rem;
+        background:#333;
+        border-radius:.3rem;
+        font-size:.9rem;
+        overflow-wrap:anywhere;
+      }
+
+      .quote-rank{
+        display:inline-block;
+        width:1.6rem;
+        font-weight:bold;
+      }
+
+      .quote-date{
+        display:inline-block;
+        width:11.5rem;
+        font-size:.75rem;
+        opacity:.65;
+      }
+
+      .quote-name{
+        font-weight:bold;
+        margin-right:.4rem;
+      }
+
+      /* ---------- CRUD-Floating-Buttons ------------------------------ */
+
+      .btnRack{
+        position:fixed;
+        top:1rem;
+        right:1rem;
+        z-index:3000;
+      }
+
+      .btnCol{
+        position:relative;
+        display:inline-block;
+        margin-right:.7rem;
+      }
+
+      .customBtn{
+        width:3.2rem;
+        height:3.2rem;
+        border-radius:50%;
+        border:none;
+        background:#0077ff;
+        color:#fff;
+        font-size:1.4rem;
+        cursor:pointer;
+        transition:background .2s;
+      }
+
+      .customBtn:hover{
+        background:#005fd1;
+      }
+
+      .dropdown{
+        position:absolute;
+        top:100%;
+        right:0;
+        margin-top:.5rem;
+        width:11rem;
+        padding:.3rem 0;
+        background:#272323;
+        border-radius:.4rem;
+        list-style:none;
+        display:none;
+        text-align:left;
+        box-shadow:0 4px 12px rgba(0,0,0,.12);
+        z-index:4000;
+      }
+
+      .dropdown li{
+        padding:.6rem 1rem;
+        cursor:pointer;
+        font-size:.85rem;
+      }
+
+      .dropdown li:hover{
+        background:#302e2e;
+      }
+
+      .add_btn-wrapper{
+        position:fixed;
+        top:1rem;
+        right:1rem;
+        z-index:1000;
+      }
+
+      /* ---------- Picker-Dialog -------------------------------------- */
+      dialog.chooseBox{
+        border:none;
+        border-radius:.6rem;
+        padding:1.2rem 1.5rem;
+        background:#333;
+        color:#fff;
+        box-shadow:0 8px 18px rgba(0,0,0,.35);
+      }
+
+      dialog.chooseBox ul{
+        margin:0;padding:0;
+        list-style:none;
+        text-align:left;
+      }
+
+      dialog.chooseBox button{
+        width:100%;
+        padding:.4rem;
+        border:none;
+        border-radius:.3rem;
+        background:#0077ff;
+        color:#fff;
+        margin:.2rem 0;
+        font-size:.85rem;
+        overflow-wrap:anywhere;
+        white-space:normal;
+      }
+
+      dialog.chooseBox button:hover{
+        background:#005fd1;
+      }
+
+      dialog.chooseBox .cancelBtn{
+        background:#555;
+      }
+
+      /* ---------- Scrollbar dezenter --------------------------------- */
+      #groupBar::-webkit-scrollbar{
+        height:6px;
+      }
+
+      #groupBar::-webkit-scrollbar-track{
+        background:#222;
+      }
+
+      #groupBar::-webkit-scrollbar-thumb{
+        background:#555;
+        border-radius:3px;
+        }
+
+    </style>
+  </head>
+  <body>
+    <!-- ---------- Floating CRUD-Menüs ------------------------------ -->
+    <header class="topBar">
+      <h1 id="appTitle">FriendCitation</h1>
+      <div class="btnRack">
+        <div class="btnCol">
+          <button id="add-btn" class="customBtn">+</button>
+          <ul id="add-dropdown" class="dropdown">
+            <li id="add-group">Gruppe hinzufügen</li>
+            <li id="add-person">Person hinzufügen</li>
+            <li id="add-citation">Zitat hinzufügen</li>
+          </ul>
+        </div>
+
+        <div class="btnCol">
+          <button id="remove-btn" class="customBtn">−</button>
+          <ul id="remove-dropdown" class="dropdown">
+            <li id="remove-group">Gruppe entfernen</li>
+            <li id="remove-person">Person entfernen</li>
+            <li id="remove-citation">Zitat entfernen</li>
+          </ul>
+        </div>
+
+        <div class="btnCol">
+          <button id="edit-btn" class="customBtn">✍️</button>
+          <ul id="edit-dropdown" class="dropdown">
+            <li id="change-group">Person in Gruppe verschieben</li>
+            <li id="edit-group">Gruppennamen bearbeiten</li>
+            <li id="edit-person">Personname bearbeiten</li>
+            <li id="edit-citation">Zitat bearbeiten</li>
+          </ul>
+        </div>
+      </div>
+    </header>
+    <!-- ---------- Gruppenleiste, Sort & Quotes --------------------- -->
+    <div id="groupBar"></div>
+
+    <div id="sortWrapper">
+      Sortieren&nbsp;nach&nbsp;
+      <select id="sortSelect">
+        <option value="rank">Rank (S → C)</option>
+        <option value="name">Name (A → Z)</option>
+        <option value="date">Datum (Neu → Alt)</option>
+      </select>
+    </div>
+    <div id="quoteList"></div>
+
+    <script>
+      /* === Zustand & Storage ========================================= */
+      const STORAGE_KEY = 'friendciteData';
+      const SETTINGS_KEY = 'friendciteSettings';
+      const data = JSON.parse(localStorage.getItem(STORAGE_KEY)||'{"groups":[]}');
+      let currentGroup = null;
+      let sortMode = 'rank';
+      const RANKS = ['S','A','B','C'];
+      const rankOrder = {S:0,A:1,B:2,C:3};
+      const save = () => localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+      const $ = id => document.getElementById(id);
+      const allPersons = () => data.groups.flatMap(g=>g.persons);
+
+      function loadSettings(){
+        try {
+          const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+          if(s.group   !== undefined) currentGroup = s.group;
+          if(s.sortMode!== undefined) sortMode     = s.sortMode;
+        } catch { /* ignore */ }
+      }
+
+      function saveSettings(){
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify({ group: currentGroup, sortMode }));
+      }
+
+      /* === Picker-Dialog ============================================= */
+      function choose(title, items) {
+        return new Promise(resolve=> {
+          const dlg = document.createElement('dialog');
+          dlg.className = 'chooseBox';
+          dlg.innerHTML = `
+            <h3>${title}</h3>
+            <ul>${items.map(o => {const txt = (o.txt!==undefined ? o.txt : o);
+              const val = (o.val!==undefined ? o.val : o);
+              return `<li><button data-v="${val}">${txt}</button></li>`;
+              }).join('')}
+            </ul>
+            <button class="cancelBtn">Abbrechen</button>`;
+
+          document.body.appendChild(dlg);
+          dlg.showModal();
+
+          dlg.addEventListener('click', e=> {
+            if (e.target.dataset.v){
+              dlg.close();
+              dlg.remove();
+              resolve(e.target.dataset.v);
+            }
+
+            if (e.target.classList.contains('cancelBtn')) {
+              dlg.close();
+              dlg.remove();
+              resolve(null);
+            }
+
+            if (e.target === dlg) {
+              dlg.close();
+              dlg.remove();
+              resolve(null);
+            }
+          });
+
+          dlg.addEventListener('cancel', () => {
+            dlg.close();
+            dlg.remove();
+            resolve(null);
+          });
+        });
+      }
+
+      function newId() {
+        return (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Date.now()+'-'+Math.random().toString(16).slice(2));
+      }
+
+      /* === CRUD-Funktionen =========================================== */
+      function addGroup() {
+        const name=prompt('Gruppenname:');
+        if(!name) return;
+        if(data.groups.some(g=>g.name===name)) {
+          alert('Name existiert.');
+          return;
+        }
+        data.groups.push({name,persons:[]});
+        save();
+        renderGroupBar();
+        renderQuotes();
+      }
+
+      async function removeGroup() {
+        if(!data.groups.length) {
+          alert('Keine Gruppen.');
+          return;
+        }
+        const name = await choose('Gruppe löschen?',data.groups.map(g=>g.name));
+        if(!name) return;
+        const g = data.groups.find(x=>x.name===name);
+        if(g.persons.length) {
+          alert('Gruppe enthält Personen.');
+          return;
+        }
+        if(!confirm(`Gruppe "${name}" löschen?`)) return;
+        data.groups=data.groups.filter(x=>x!==g);
+        currentGroup=null;
+        save();
+        renderGroupBar();
+        renderQuotes();
+      }
+
+      async function addPerson(){
+        if(!data.groups.length){
+          alert('Lege zuerst eine Gruppe an.');
+          return;
+        }
+        const gName = await choose('Gruppe wählen', data.groups.map(g => g.name));
+        if(!gName) return;
+        const group = data.groups.find(g => g.name === gName);
+        const pName = prompt('Name der Person:');
+        if(!pName) return;
+        if(group.persons.some(p => p.name === pName)){
+          alert('In dieser Gruppe gibt es bereits eine Person mit diesem Namen.');
+          return;
+        }
+        group.persons.push({
+          id: newId(),
+          name: pName,
+          citations: []
+        });
+
+        save();
+        renderGroupBar();
+        renderQuotes();
+      }
+
+      async function removePerson() {
+        if(!data.groups.length) {
+          alert('Keine Gruppe.');
+          return;
+        }
+        const gname = await choose('Gruppe wählen',data.groups.map(g=>g.name));
+        if(!gname) return;
+        const group = data.groups.find(g=>g.name===gname);
+        if(!group.persons.length){ 
+          alert('Keine Personen.');
+          return;
+        }
+        const selId = await choose('Person löschen',group.persons.map(p=>({txt:p.name,val:p.id})));
+        if(!selId) return;
+        if(!confirm('Person löschen?')) return;
+        group.persons = group.persons.filter(p=>p.id!==selId);
+        save();
+        renderQuotes();
+      }
+
+      async function addCitation() {
+        if(!data.groups.length) {
+          alert('Keine Gruppe.');
+          return;
+        }
+        const gname = await choose('Gruppe wählen',data.groups.map(g=>g.name));
+        if(!gname) return;
+        const group = data.groups.find(g=>g.name===gname);
+        if(!group.persons.length) {
+          alert('Keine Personen.');
+          return;
+        }
+        const selId = await choose('Person wählen',group.persons.map(p=>({txt:p.name,val:p.id})));
+        if(!selId) return;
+        const person = group.persons.find(p=>p.id===selId);
+        const text = prompt('Zitat:');
+        if(!text) return;
+        const rank = await choose('Rank wählen',RANKS);
+        if(!rank) return;
+        person.citations.push({text,rank,created:new Date().toISOString()});
+        save();
+        renderQuotes();
+      }
+
+      async function removeCitation() {
+        if(!data.groups.length) {
+          alert('Keine Gruppe.');
+          return;
+        }
+        const gname = await choose('Gruppe wählen',data.groups.map(g=>g.name));
+        if(!gname) return;
+        const group = data.groups.find(g=>g.name===gname);
+        if(!group.persons.length) {
+          alert('Keine Personen.');
+          return;
+        }
+        const selId = await choose('Person wählen',group.persons.map(p=>({txt:p.name,val:p.id})));
+        if(!selId) return;
+        const person = group.persons.find(p=>p.id===selId);
+        if(!person.citations.length) {
+          alert('Keine Zitate.');
+          return;
+        }
+        const labels = person.citations.map(c=>`${c.rank} | ${c.text}`);
+        const choice = await choose('Zitat wählen',labels);
+        if(!choice) return;
+        const idx = labels.indexOf(choice);
+        if(!confirm('Zitat löschen?')) return;
+        person.citations.splice(idx,1);
+        save();
+        renderQuotes();
+      }
+
+      async function renameGroup() {
+        if(!data.groups.length) return;
+        const old = await choose('Gruppe wählen',data.groups.map(g=>g.name));
+        if(!old) return;
+        const group = data.groups.find(g=>g.name===old);
+        const neu = prompt('Neuer Name:',old);
+        if(!neu||neu===old) return;
+        if(data.groups.some(g=>g.name===neu)) {
+          alert('Name existiert');
+          return;
+        }
+        group.name = neu;
+        if(currentGroup===old) currentGroup = neu;
+        save();
+        renderGroupBar();
+        renderQuotes();
+      }
+
+      async function renamePerson() {
+        if(!data.groups.length) return;
+        const gname = await choose('Gruppe wählen',data.groups.map(g=>g.name));
+        if(!gname) return;
+        const group = data.groups.find(g=>g.name===gname);
+        if(!group.persons.length) {
+          alert('Keine Personen');
+          return;
+        }
+
+        const selId = await choose('Person wählen',group.persons.map(p=>({txt:p.name,val:p.id})));
+        if(!selId) return;
+        const person = group.persons.find(p=>p.id===selId);
+        const neu = prompt('Neuer Name:',person.name);
+        if(!neu||neu===old) return;
+        if(allPersons().some(p=>p.name===neu)) {
+          alert('Name existiert');
+          return;
+        }
+        person.name = neu;
+        save();
+        renderQuotes();
+      }
+
+      async function renameCitation() {
+        if(!data.groups.length) return;
+        const gname = await choose('Gruppe wählen',data.groups.map(g=>g.name));
+        if(!gname) return;
+        const group = data.groups.find(g=>g.name===gname);
+        if(!group.persons.length) return;
+        const selId = await choose('Person wählen',group.persons.map(p=>({txt:p.name,val:p.id})));
+        if(!selId) return;
+        const person = group.persons.find(p=>p.id===selId);
+        if(!person.citations.length) return;
+        const labels = person.citations.map(c=>`${c.rank} | ${c.text}`);
+        const choice = await choose('Zitat wählen',labels);
+        if(!choice) return;
+        const idx = labels.indexOf(choice);
+        const cit = person.citations[idx];
+        const newText = prompt('Neues Zitat:',cit.text);
+        if(!newText||newText===cit.text) return;
+        const newRank = await choose('Neuer Rank',RANKS);
+        if(!newRank) return;
+        cit.text = newText;
+        cit.rank = newRank;
+        save();
+        renderQuotes();
+      }
+
+      async function changeGroup(){
+        const persons = allPersons();
+        if(!persons.length){ alert('Keine Personen.'); return; }
+        const selId = await choose('Person wählen',persons.map(p => ({ txt: p.name, val: p.id })));
+        if(!selId) return;
+        const src  = data.groups.find(g => g.persons.some(p => p.id === selId));
+        const person = src.persons.find(p => p.id === selId);
+        const targets = data.groups.filter(g => g !== src);
+        if(!targets.length){ alert('Keine andere Gruppe.'); return; }
+        const tgtName = await choose('Zielgruppe wählen', targets.map(g => g.name));
+        if(!tgtName) return;
+        const tgt = data.groups.find(g => g.name === tgtName);
+        src.persons = src.persons.filter(p => p.id !== selId);
+        tgt.persons.push(person);
+        save();
+        renderGroupBar();
+        renderQuotes();
+      }
+
+      /* === Darstellungsfunktionen ==================================== */
+      const groupBar=$('groupBar');
+      const quoteList=$('quoteList');
+      const sortSelect=$('sortSelect');
+
+      sortSelect.onchange = () => {sortMode=sortSelect.value;saveSettings();renderQuotes();};
+
+      function renderGroupBar() {
+        groupBar.innerHTML = 'Gruppen:&nbsp;';
+        data.groups.forEach(g => {
+          const pill = document.createElement('span');
+          pill.className = 'group-pill'+(currentGroup===g.name?' active':'');
+          pill.textContent = g.name;
+          pill.onclick = () => {currentGroup=g.name;saveSettings();renderGroupBar();renderQuotes();};
+          groupBar.appendChild(pill);
+        });
+        const all = document.createElement('span');
+        all.className = 'group-pill'+(currentGroup===null?' active':'');
+        all.textContent = 'Alle Gruppen';
+        all.onclick = () => {currentGroup=null;renderGroupBar();renderQuotes();};
+        groupBar.appendChild(all);
+      }
+
+      function sortFn(a,b) {
+        if(sortMode==='rank') return rankOrder[a.rank]-rankOrder[b.rank]||new Date(b.created)-new Date(a.created);
+        if(sortMode==='name') return a.person.localeCompare(b.person,'de');
+        if(sortMode==='date') return new Date(b.created)-new Date(a.created);
+        return 0;
+      }
+
+      function fmtDateTime(iso) {
+        const d = new Date(iso);
+        const date = d.toLocaleDateString('de-DE',{
+                      day:'2-digit',month:'2-digit',year:'2-digit'});
+        const time = d.toLocaleTimeString('de-DE',{
+                      hour:'2-digit',minute:'2-digit',hour12:false});
+        return `${date} ${time}`;
+      }
+
+      function renderQuotes() {
+        quoteList.innerHTML = '';
+        let items = [];
+        data.groups.forEach(g => {
+          if(currentGroup!==null&&g.name!==currentGroup) return;
+          g.persons.forEach(p => {
+            p.citations.forEach(c => items.push({...c,person:p.name,group:g.name}));
+          });
+        });
+        if(!items.length) {
+          quoteList.textContent='– keine Zitate –';
+          return;
+        }
+        items.sort(sortFn);
+        items.forEach(c => {
+          const d=document.createElement('div');d.className='quote-item';
+          d.innerHTML=`<span class="quote-rank">[${c.rank}]</span>
+                      <span class="quote-date">${fmtDateTime(c.created)}</span>
+                      <span class="quote-name">${c.person}</span>
+                      «${c.text}»`;
+          quoteList.appendChild(d);
+        });
+      }
+
+      /* === Dropdown-Toggle-Logik ===================================== */
+      function toggle(el) {
+        el.style.display=el.style.display==='block'?'none':'block';
+      }
+
+      $('add-btn').onclick = () => toggle($('add-dropdown'));
+      $('remove-btn').onclick = () => toggle($('remove-dropdown'));
+      $('edit-btn').onclick = () => toggle($('edit-dropdown'));
+      document.addEventListener('click',e => {
+        if(!$('add-btn').contains(e.target)&&!$('add-dropdown').contains(e.target)) $('add-dropdown').style.display='none';
+        if(!$('remove-btn').contains(e.target)&&!$('remove-dropdown').contains(e.target)) $('remove-dropdown').style.display='none';
+        if(!$('edit-btn').contains(e.target)&&!$('edit-dropdown').contains(e.target)) $('edit-dropdown').style.display='none';
+      });
+
+      /* === Menü-Listener ============================================= */
+      $('add-group').onclick = () => {toggle($('add-dropdown')); addGroup();};
+      $('add-person').onclick = () => {toggle($('add-dropdown')); addPerson();};
+      $('add-citation').onclick = () => {toggle($('add-dropdown')); addCitation();};
+
+      $('remove-group').onclick = () => {toggle($('remove-dropdown')); removeGroup();};
+      $('remove-person').onclick = () => {toggle($('remove-dropdown')); removePerson();};
+      $('remove-citation').onclick = () => {toggle($('remove-dropdown')); removeCitation();};
+
+      $('change-group').onclick = () => {toggle($('edit-dropdown')); changeGroup();};
+      $('edit-group').onclick  = () => {toggle($('edit-dropdown')); renameGroup();};
+      $('edit-person').onclick = () => {toggle($('edit-dropdown')); renamePerson();};
+      $('edit-citation').onclick = () => {toggle($('edit-dropdown')); renameCitation();};
+
+      /* === Init ======================================================= */
+      loadSettings();
+      sortSelect.value = sortMode;
+      renderGroupBar();
+      renderQuotes();
+    </script>
+  </body>
+</html>
